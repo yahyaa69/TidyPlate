@@ -1,0 +1,6 @@
+langchain
+streamlit
+langchain-groq
+python-dotenv
+fastapi
+uvicorn

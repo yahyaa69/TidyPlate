@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TidyPlate</title>
+    <link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css" rel="stylesheet" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fa;
+            padding: 20px;
+        }
+        .chat-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .chat-history {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #e0f7fa;
+            text-align: left;
+        }
+        .bot-message {
+            background-color: #e8eaf6;
+            text-align: left;
+        }
+        .input-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .input-container input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .input-container button {
+            padding: 10px 15px;
+            margin-left: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .input-container button:hover {
+            background-color: #45a049;
+        }
+        .clear-button {
+            padding: 10px 15px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .clear-button:hover {
+            background-color: #da190b;
+        }
+        /* CSS for code blocks */
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: "Courier New", monospace;
+            font-size: 1rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        /* CSS for lists */
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+        ul li {
+            margin-bottom: 5px;
+        }
+        /* Optional styling for bold and italicized text */
+        b {
+            font-weight: bold;
+        }
+        i {
+            font-style: italic;
+        }
+        table {
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        th, td {
+            padding: 8px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h2>TidyPlate</h2>
+        <div class="chat-history" id="chat-history">
+            <!-- Chat history will be displayed here -->
+        </div>
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Type your message here..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+        <button class="clear-button" onclick="clearHistory()">Clear History</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/prismjs/prism.js"></script>
+    <script>
+        const chatHistoryElement = document.getElementById("chat-history");
+
+        // Function to send the user's message to the server
+        function sendMessage() {
+            const userInput = document.getElementById("user-input").value;
+            if (!userInput) return;
+
+            // Add user message to chat history
+            addMessageToChat(userInput, "user");
+
+            // Send the user's message to the backend API
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ user_input: userInput })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const botResponse = data.response;
+                const chatHistory = data.chat_history;
+
+                // Display bot response in chat history with formatting
+                addMessageToChat(botResponse, "bot");
+
+                // Update chat history UI
+                updateChatHistory(chatHistory);
+            });
+
+            document.getElementById("user-input").value = ''; // Clear input field
+        }
+
+        // Function to display messages in chat with formatting
+        function addMessageToChat(message, sender) {
+            const messageElement = document.createElement("div");
+            messageElement.classList.add("chat-message");
+            messageElement.classList.add(sender === "user" ? "user-message" : "bot-message");
+
+            // Format bot message for better readability
+            messageElement.innerHTML = formatMessage(message);
+
+            chatHistoryElement.appendChild(messageElement);
+
+            // Scroll to the bottom of the chat
+            chatHistoryElement.scrollTop = chatHistoryElement.scrollHeight;
+
+            // Apply syntax highlighting
+            Prism.highlightAll();
+        }
+
+        // Function to format the bot's response to improve readability
+        function formatMessage(message) {
+            // Detect if the message contains code blocks (simple example)
+            message = message.replace(/```(.*?)```/gs, '<pre><code class="language-javascript">$1</code></pre>');
+
+            // Detect bullet points (simple example)
+            message = message.replace(/- (.*?)(\n|$)/g, '<ul><li>$1</li></ul>');
+
+            // Add line breaks for paragraphs
+            message = message.replace(/\n/g, '<br>');
+
+            // Apply bold or italics (basic example)
+            message = message.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            message = message.replace(/\*(.*?)\*/g, '<i>$1</i>');
+
+            // Format tables (simple example)
+            message = message.replace(/\|(.+?)\|/g, function(match, content) {
+                const rows = content.split('\n').map(row => row.split('|').map(cell => `<td>${cell.trim()}</td>`).join(''));
+                return `<table><tr>${rows.join('</tr><tr>')}</tr></table>`;
+            });
+
+            // Return formatted message
+            return message;
+        }
+
+        // Function to update chat history from backend
+        function updateChatHistory(chatHistory) {
+            chatHistoryElement.innerHTML = '';  // Clear current chat history
+
+            chatHistory.forEach(entry => {
+                addMessageToChat(entry.human, "user");
+                addMessageToChat(entry.AI, "bot");
+            });
+        }
+
+        // Function to clear chat history
+        function clearHistory() {
+            fetch('/history', {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatHistoryElement.innerHTML = ''; // Clear the UI
+            });
+        }
+
+        // Optionally, fetch and display chat history when the page loads
+        window.onload = function() {
+            fetch('/history')
+                .then(response => response.json())
+                .then(data => {
+                    updateChatHistory(data.chat_history);
+                });
+        };
+    </script>
+</body>
+</html>
